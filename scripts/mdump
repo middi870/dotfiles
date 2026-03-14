@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --------------------------------------------------
+# mdump
+#
+# Generate a Markdown dump of a project including:
+#   • project tree
+#   • selected source files
+#
+# Designed for sharing project context with
+# LLMs, documentation, or debugging sessions.
+#
+# Output is copied to clipboard using wl-copy.
+# --------------------------------------------------
+
+
+# --------------------------------------------------
+# Help
+# --------------------------------------------------
+
+print_help() {
+cat << EOF
+Usage:
+  mdump [TARGET] [OPTIONS]
+
+Description:
+  Create a Markdown formatted dump of a project.
+
+Arguments:
+  TARGET                 Directory to inspect (default: current directory)
+
+Options:
+  --ext EXT1,EXT2        File extensions to include (default: rs)
+  --max-size KB          Skip files larger than size (default: 512)
+  --no-gitignore         Ignore .gitignore rules
+  -h, --help             Show this help message
+
+Examples:
+  mdump
+  mdump ./project
+  mdump ./project --ext rs,py
+  mdump ./project --max-size 1024
+EOF
+}
+
+
+# --------------------------------------------------
+# Dependency Checks
+# --------------------------------------------------
+
+require_cmd() {
+command -v "$1" >/dev/null 2>&1 || {
+echo "Error: '$1' is required but not installed."
+exit 1
+}
+}
+
+require_cmd tree
+require_cmd wl-copy
+require_cmd find
+
+
+# --------------------------------------------------
+# Defaults
+# --------------------------------------------------
+
+TARGET="."
+EXTENSIONS="rs"
+MAX_SIZE_KB=512
+USE_GITIGNORE=true
+
+
+# --------------------------------------------------
+# Argument Parsing
+# --------------------------------------------------
+
+while [[ $# -gt 0 ]]; do
+case "$1" in
+--ext)
+EXTENSIONS="$2"
+shift 2
+;;
+
+--max-size)
+MAX_SIZE_KB="$2"
+shift 2
+;;
+
+--no-gitignore)
+USE_GITIGNORE=false
+shift
+;;
+
+-h|--help)
+print_help
+exit 0
+;;
+
+*)
+TARGET="$1"
+shift
+;;
+esac
+done
+
+
+if [[ ! -d "$TARGET" ]]; then
+echo "Error: $TARGET is not a directory"
+exit 1
+fi
+
+
+# --------------------------------------------------
+# Ignore Rules
+# --------------------------------------------------
+
+IGNORE_PATTERN="target|node_modules|.git|Cargo.lock"
+
+if [[ "$USE_GITIGNORE" = true && -f "$TARGET/.gitignore" ]]; then
+GITIGNORE_LIST=$(grep -v '^#' "$TARGET/.gitignore" | tr '\n' '|')
+IGNORE_PATTERN="$IGNORE_PATTERN|$GITIGNORE_LIST"
+fi
+
+
+# --------------------------------------------------
+# Extension Handling
+# --------------------------------------------------
+
+IFS=',' read -ra EXT_ARRAY <<< "$EXTENSIONS"
+
+EXT_EXPR=()
+
+for ext in "${EXT_ARRAY[@]}"; do
+EXT_EXPR+=( -name "*.${ext}" -o )
+done
+
+unset 'EXT_EXPR[${#EXT_EXPR[@]}-1]'
+
+
+# --------------------------------------------------
+# Language Detection
+# --------------------------------------------------
+
+detect_lang() {
+
+case "$1" in
+*.rs) echo "rust" ;;
+*.py) echo "python" ;;
+*.js) echo "javascript" ;;
+*.ts) echo "typescript" ;;
+*.go) echo "go" ;;
+*.c) echo "c" ;;
+*.cpp) echo "cpp" ;;
+*.lua) echo "lua" ;;
+*.json) echo "json" ;;
+*.toml) echo "toml" ;;
+*.yaml|*.yml) echo "yaml" ;;
+*.sh) echo "bash" ;;
+*.md) echo "markdown" ;;
+*) echo "" ;;
+esac
+
+}
+
+
+# --------------------------------------------------
+# Output
+# --------------------------------------------------
+
+{
+echo "# Project Dump"
+echo ""
+
+echo "Directory: \`$TARGET\`"
+echo ""
+
+echo "## Project Structure"
+echo ""
+echo '```text'
+tree -a -I "$IGNORE_PATTERN" "$TARGET"
+echo '```'
+echo ""
+
+echo "## File Contents"
+echo ""
+
+find "$TARGET" \
+-type f \
+\( "${EXT_EXPR[@]}" \) \
+-print0 |
+sort -z |
+while IFS= read -r -d '' file
+do
+
+size_kb=$(du -k "$file" | cut -f1)
+
+if (( size_kb > MAX_SIZE_KB )); then
+continue
+fi
+
+rel="${file#$TARGET/}"
+lang=$(detect_lang "$file")
+
+echo "### $rel"
+echo ""
+
+if [[ -n "$lang" ]]; then
+printf '```%s\n' "$lang"
+else
+echo '```'
+fi
+
+cat "$file"
+
+echo '```'
+echo ""
+
+done
+
+} | wl-copy
+
+
+echo "Markdown dump copied to clipboard."

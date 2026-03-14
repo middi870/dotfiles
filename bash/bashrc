@@ -1,0 +1,27 @@
+# ~/.bashrc
+
+# Only run for interactive shells
+[[ $- != *i* ]] && return
+
+# ----- Prompt -----
+# Green user@host, blue working directory
+PS1='\e[1;32m\u@\h\e[0m \e[0;34m\w\e[0m \$ '
+
+# ----- Aliases -----
+alias ls='ls --color=auto'
+alias ll='ls -l --color=auto'
+alias la='ls -A --color=auto'
+alias lh='ls -d .[^.]* --color=auto'
+
+alias grep='grep --color=auto'
+
+
+# ----- Speech alias -----
+alias speak='piper-tts --model ~/.piper/en_US-lessac-high.onnx --output_file speech.wav && mpv speech.wav'
+
+#------------------------
+export PATH="$HOME/bin:$PATH"
+
+# ----- Stability Fix for Kitty + Wayland -----
+# Prevent bracketed paste visual duplication issue
+bind 'set enable-bracketed-paste off'

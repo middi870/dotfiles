@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# --------------------------------------------------
+# Help
+# --------------------------------------------------
+
+print_help() {
+cat << EOF
+Usage:
+  mdump [TARGET] [OPTIONS]
+
+Description:
+  Dumps project structure and selected file contents
+  as Markdown and copies to clipboard.
+
+Arguments:
+  TARGET                Directory to inspect (default: .)
+
+Options:
+  --ext EXT1,EXT2       Comma-separated list of file extensions
+                        to include (default: rs)
+  -h, --help            Show this help message
+
+Examples:
+  mdump
+  mdump ./my_project
+  mdump ./my_project --ext rs,py
+  mdump --ext py
+EOF
+}
+
+# --------------------------------------------------
+# Argument Parsing
+# --------------------------------------------------
+
+TARGET="."
+EXTENSIONS="rs"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ext)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --ext requires a value"
+                exit 1
+            fi
+            EXTENSIONS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        *)
+            TARGET="$1"
+            shift
+            ;;
+    esac
+done
+
+TARGET="${TARGET:-.}"
+
+if [[ ! -d "$TARGET" ]]; then
+    echo "Error: $TARGET is not a directory"
+    exit 1
+fi
+
+# --------------------------------------------------
+# Ignore Rules
+# --------------------------------------------------
+
+IGNORE_DIRS=(
+    "target"
+    ".git"
+    "node_modules"
+)
+
+IGNORE_FILES=(
+    "Cargo.lock"
+)
+
+TREE_IGNORE="target|.git|node_modules|Cargo.lock"
+
+# --------------------------------------------------
+# Extension Handling
+# --------------------------------------------------
+
+IFS=',' read -ra EXT_ARRAY <<< "$EXTENSIONS"
+
+EXT_EXPR=()
+for ext in "${EXT_ARRAY[@]}"; do
+    EXT_EXPR+=( -name "*.${ext}" -o )
+done
+unset 'EXT_EXPR[${#EXT_EXPR[@]}-1]'
+
+# --------------------------------------------------
+# Language Detection
+# --------------------------------------------------
+
+detect_lang() {
+    case "$1" in
+        *.rs) echo "rust" ;;
+        *.py) echo "python" ;;
+        *.js) echo "javascript" ;;
+        *.ts) echo "typescript" ;;
+        *.json) echo "json" ;;
+        *.toml) echo "toml" ;;
+        *.sh) echo "bash" ;;
+        *.md) echo "markdown" ;;
+        *) echo "" ;;
+    esac
+}
+
+# --------------------------------------------------
+# Markdown Output
+# --------------------------------------------------
+
+{
+    echo "# Project Dump: $TARGET"
+    echo ""
+
+    echo "## Project Structure"
+    echo ""
+    echo '```text'
+    tree -a -I "$TREE_IGNORE" "$TARGET"
+    echo '```'
+    echo ""
+
+    echo "## File Contents"
+    echo ""
+
+    find "$TARGET" \
+        -type f \
+        \( "${EXT_EXPR[@]}" \) \
+        ! -path "*/target/*" \
+        ! -path "*/.git/*" \
+        ! -path "*/node_modules/*" \
+        ! -name "Cargo.lock" \
+        -print0 |
+    while IFS= read -r -d '' f; do
+
+        rel="${f#$TARGET/}"
+        lang=$(detect_lang "$f")
+
+        echo "### $rel"
+        echo ""
+
+        if [[ -n "$lang" ]]; then
+            printf '```%s\n' "$lang"
+        else
+            echo '```'
+        fi
+
+        cat "$f"
+        echo '```'
+        echo ""
+    done
+
+} | wl-copy
+
+echo "Markdown project dump of '$TARGET' copied to clipboard."

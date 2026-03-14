@@ -1,0 +1,7 @@
+bash-completion
+brightnessctl
+vlc
+fastfetch
+lmms
+tree
+less

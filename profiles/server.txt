@@ -1,0 +1,7 @@
+tmux
+htop
+tree
+fastfetch
+neovim
+git
+docker

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --------------------------------------------------
+# Help
+# --------------------------------------------------
+
+print_help() {
+cat << EOF
+Usage:
+  fdump [TARGET] [OPTIONS]
+
+Description:
+  Dumps a directory tree and contents of all files.
+  Output is copied to clipboard.
+
+Arguments:
+  TARGET                Directory to inspect (default: current directory)
+
+Options:
+  -A                    Include hidden files
+  -h, --help            Show this help message
+
+Behavior:
+  • Prints project tree
+  • Prints contents of all files
+  • Copies output to clipboard using wl-copy
+
+Examples:
+  fdump
+  fdump ./project
+  fdump -A
+  fdump ./project -A
+EOF
+}
+
+# --------------------------------------------------
+# Argument Parsing
+# --------------------------------------------------
+
+TARGET="."
+INCLUDE_HIDDEN=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -A)
+            INCLUDE_HIDDEN=true
+            shift
+            ;;
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        *)
+            TARGET="$1"
+            shift
+            ;;
+    esac
+done
+
+if [[ ! -d "$TARGET" ]]; then
+    echo "Error: $TARGET is not a directory"
+    exit 1
+fi
+
+# --------------------------------------------------
+# Ignore rules
+# --------------------------------------------------
+
+if $INCLUDE_HIDDEN; then
+    TREE_IGNORE=""
+else
+    TREE_IGNORE=".*"
+fi
+
+# --------------------------------------------------
+# Output
+# --------------------------------------------------
+
+{
+    echo "===== PROJECT TREE ====="
+    tree -a -I "$TREE_IGNORE" "$TARGET"
+
+    echo ""
+    echo "===== FILE CONTENTS ====="
+
+    if $INCLUDE_HIDDEN; then
+        find "$TARGET" -type f -print0
+    else
+        find "$TARGET" -type f ! -path "*/.*" -print0
+    fi | while IFS= read -r -d '' f; do
+
+        echo ""
+        echo ">>> $f"
+        echo "-------------------------"
+        cat "$f"
+
+    done
+
+} | wl-copy
+
+echo "Full dump of '$TARGET' copied to clipboard."

@@ -1,0 +1,62 @@
+#waybar {
+    background: transparent;
+    color: #ffffff;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    padding: 0 10px;
+}
+
+/* Module spacing: add a little more horizontal breathing room */
+#waybar .module {
+    margin: 0 6px;
+}
+
+#waybar .module:hover {
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+}
+
+/* Emphasize important modules */
+#workspaces,
+#backlight,
+#clock,
+#battery,
+#cpu,
+#memory,
+#disk,
+#temperature,
+#pulseaudio,
+#custom-media,
+#custom-power {
+    font-weight: normal;
+}
+
+/* Tray spacing */
+#waybar .tray {
+    margin: 0 6px;
+}
+
+/* === Tray spacing */
+#tray {
+    margin: 0 6px;
+}
+
+/* === Battery warning colors */
+#battery.warning {
+    color: #ffaa00;
+}
+
+#battery.critical {
+    color: #ff4444;
+}
+
+/* === Audio muted color */
+#pulseaudio.muted {
+    color: #777;
+}
+
+/* === Prevent power buttons from shrinking too much */
+#power-profiles-daemon,
+#custom-power {
+    min-width: 10px;
+}

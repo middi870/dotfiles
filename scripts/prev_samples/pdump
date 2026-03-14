@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_help() {
+cat << EOF
+Usage:
+  prog [TARGET] [OPTIONS]
+
+Description:
+  Dumps a project tree and selected file contents to clipboard.
+
+Arguments:
+  TARGET                Directory to inspect (default: current directory)
+
+Options:
+  --ext EXT1,EXT2       Comma-separated list of file extensions to include
+                        (default: rs)
+
+  -h, --help            Show this help message and exit
+
+Behavior:
+  • Prints a project tree using 'tree'
+  • Prints contents of selected file types
+  • Copies entire output to clipboard using wl-copy
+  • Ignores predefined paths
+
+Default Ignore List:
+  target
+  .git
+  Cargo.lock
+  node_modules
+  .*  (hidden files)
+
+Examples:
+  prog
+  prog ./my_project
+  prog ./my_project --ext rs,py
+  prog --ext py
+EOF
+}
+
+# ----------------------------
+# Argument Parsing
+# ----------------------------
+
+TARGET="."
+EXTENSIONS="rs"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ext)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --ext requires a value"
+                exit 1
+            fi
+            EXTENSIONS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        *)
+            TARGET="$1"
+            shift
+            ;;
+    esac
+done
+
+if [[ ! -d "$TARGET" ]]; then
+    echo "Error: $TARGET is not a directory"
+    exit 1
+fi
+
+# ----------------------------
+# Ignore Policy
+# ----------------------------
+
+IGNORE_LIST=(
+    "target"
+    ".git"
+    "Cargo.lock"
+    "node_modules"
+    ".*"
+)
+
+TREE_IGNORE=$(IFS="|"; echo "${IGNORE_LIST[*]}")
+
+FIND_PRUNE=()
+for item in "${IGNORE_LIST[@]}"; do
+    FIND_PRUNE+=( -path "*/$item" -prune -o )
+done
+
+# ----------------------------
+# Extension Handling
+# ----------------------------
+
+IFS=',' read -ra EXT_ARRAY <<< "$EXTENSIONS"
+
+EXT_EXPR=()
+for ext in "${EXT_ARRAY[@]}"; do
+    EXT_EXPR+=( -name "*.${ext}" -o )
+done
+
+unset 'EXT_EXPR[${#EXT_EXPR[@]}-1]'
+
+# ----------------------------
+# Output
+# ----------------------------
+
+{
+    echo "===== PROJECT TREE ====="
+    tree -a -I "$TREE_IGNORE" "$TARGET"
+
+    echo ""
+    echo "===== FILE CONTENTS ====="
+
+    find "$TARGET" \
+        \( "${FIND_PRUNE[@]}" -false \) \
+        -o -type f \( "${EXT_EXPR[@]}" \) -print0 |
+    while IFS= read -r -d '' f; do
+        echo ""
+        echo ">>> $f"
+        echo "-------------------------"
+        cat "$f"
+    done
+
+} | wl-copy
+
+echo "Project dump of '$TARGET' copied to clipboard."

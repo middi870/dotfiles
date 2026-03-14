@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_help() {
+cat << EOF
+Usage:
+  pdump [TARGET] [OPTIONS]
+
+Description:
+  Dump project tree and selected file contents to clipboard.
+
+Options:
+  --ext EXT1,EXT2   File extensions to include (default: rs)
+  -h, --help        Show this help message
+
+Examples:
+  pdump
+  pdump ./project
+  pdump ./project --ext rs,py
+EOF
+}
+
+require_cmd() {
+command -v "$1" >/dev/null 2>&1 || {
+echo "Error: '$1' is required but not installed."
+exit 1
+}
+}
+
+TARGET="."
+EXTENSIONS="rs"
+
+while [[ $# -gt 0 ]]; do
+case "$1" in
+--ext)
+EXTENSIONS="$2"
+shift 2
+;;
+-h|--help)
+print_help
+exit 0
+;;
+*)
+TARGET="$1"
+shift
+;;
+esac
+done
+
+require_cmd tree
+require_cmd wl-copy
+
+IFS=',' read -ra EXT_ARRAY <<< "$EXTENSIONS"
+
+EXT_EXPR=()
+for ext in "${EXT_ARRAY[@]}"; do
+EXT_EXPR+=( -name "*.${ext}" -o )
+done
+unset 'EXT_EXPR[${#EXT_EXPR[@]}-1]'
+
+IGNORE_LIST=(
+"target"
+".git"
+"node_modules"
+"Cargo.lock"
+".*"
+)
+
+TREE_IGNORE=$(IFS="|"; echo "${IGNORE_LIST[*]}")
+
+{
+echo "===== PROJECT TREE ====="
+tree -a -I "$TREE_IGNORE" "$TARGET"
+
+echo ""
+echo "===== FILE CONTENTS ====="
+
+find "$TARGET" -type f \( "${EXT_EXPR[@]}" \) -print0 |
+while IFS= read -r -d '' file; do
+echo ""
+echo ">>> $file"
+echo "------------------------"
+cat "$file"
+done
+
+} | wl-copy
+
+echo "Project dump copied to clipboard."

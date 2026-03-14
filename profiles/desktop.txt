@@ -1,0 +1,10 @@
+hyprland
+waybar
+kitty
+wofi
+grim
+slurp
+wl-clipboard
+wlogout
+swaync
+hyprpaper

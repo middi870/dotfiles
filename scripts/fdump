@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_help() {
+cat << EOF
+Usage:
+  fdump [TARGET] [-A]
+
+Description:
+  Dump every file in a project and copy to clipboard.
+
+Options:
+  -A         Include hidden files
+  -h         Show help
+
+Examples:
+  fdump
+  fdump ./project
+  fdump -A
+EOF
+}
+
+require_cmd() {
+command -v "$1" >/dev/null 2>&1 || {
+echo "Error: '$1' is required but not installed."
+exit 1
+}
+}
+
+TARGET="."
+INCLUDE_HIDDEN=false
+
+while [[ $# -gt 0 ]]; do
+case "$1" in
+-A)
+INCLUDE_HIDDEN=true
+shift
+;;
+-h|--help)
+print_help
+exit 0
+;;
+*)
+TARGET="$1"
+shift
+;;
+esac
+done
+
+require_cmd tree
+require_cmd wl-copy
+
+{
+echo "===== PROJECT TREE ====="
+
+if $INCLUDE_HIDDEN; then
+tree "$TARGET"
+else
+tree -a -I ".*" "$TARGET"
+fi
+
+echo ""
+echo "===== FILE CONTENTS ====="
+
+if $INCLUDE_HIDDEN; then
+find "$TARGET" -type f -print0
+else
+find "$TARGET" -type f -not -path '*/.*' -print0
+fi | while IFS= read -r -d '' f; do
+echo ""
+echo ">>> $f"
+echo "-----------------------"
+cat "$f"
+done
+
+} | wl-copy
+
+echo "Full dump copied to clipboard."

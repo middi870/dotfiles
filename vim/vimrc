@@ -1,0 +1,162 @@
+" ==========================================================
+" Vim Configuration
+"
+" Author: Aditya Ranjan Jha
+" Purpose: Minimal development configuration with Rust support
+"
+" Requirements:
+"   vim-plug
+"
+" Remember to do this:-
+" Setup after opening Vim:
+"
+"   :PlugInstall
+"   :CocInstall coc-rust-analyzer
+"
+" ==========================================================
+
+" ==========================================================
+" Leader Key
+" ==========================================================
+
+let mapleader = " "
+
+" ==========================================================
+" Plugin Manager (vim-plug)
+" ==========================================================
+
+call plug#begin('~/.vim/plugged')
+
+" Comment toggling
+Plug 'tpope/vim-commentary'
+
+" Language Server Protocol client
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+call plug#end()
+
+"===========================================================
+"File Detection(Early)
+"===========================================================
+
+filetype plugin indent on
+syntax enable
+
+" ==========================================================
+" Core Editor Behavior
+" ==========================================================
+
+set hidden
+set mouse=a
+set encoding=utf-8
+set fileencoding=utf-8
+
+set number
+set relativenumber
+
+set nowrap
+
+set scrolloff=8
+set sidescrolloff=8
+
+" ==========================================================
+" Tabs and Indentation
+" ==========================================================
+
+set expandtab
+set shiftwidth=4
+set tabstop=4
+set smartindent
+
+" ==========================================================
+" Search Behavior
+" ==========================================================
+
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
+set wildignore+=*/target/*,*/node_modules/*,*/.git/*
+" ==========================================================
+" UI Improvements
+" ==========================================================
+
+set ruler
+set wildmenu
+set signcolumn=yes
+
+set clipboard=unnamedplus
+
+set updatetime=300
+
+" ==========================================================
+" Completion Behavior
+" ==========================================================
+
+set completeopt=menuone,noinsert,noselect
+set shortmess+=c
+
+" ==========================================================
+" Syntax & Theme
+" ==========================================================
+
+syntax enable
+filetype plugin indent on
+
+colorscheme slate
+
+
+" ==========================================================
+" Project Explorer (netrw)
+" ==========================================================
+
+set path+=**
+" Open file explorer
+nnoremap <leader>e :Ex<CR>
+
+" Open explorer in vertical split
+nnoremap <leader>E :Vex<CR>
+
+" Close explorer quickly
+nnoremap <leader>q :bd<CR>
+
+" ==========================================================
+" Better Netrw Settings
+" ==========================================================
+
+let g:netrw_banner = 0
+let g:netrw_liststyle = 3
+let g:netrw_browse_split = 0
+let g:netrw_altv = 1
+let g:netrw_winsize = 25
+
+
+" Search files in current project
+nnoremap <leader>f :find<space>
+nnoremap <leader>g :grep<space>
+
+" ==========================================================
+" COC Keybindings
+" ==========================================================
+
+" Go to definition
+nnoremap <silent> gd <Plug>(coc-definition)
+
+" Rename symbol
+nnoremap <leader>rn <Plug>(coc-rename)
+
+" Code actions
+nnoremap <leader>ca <Plug>(coc-codeaction)
+
+" Hover documentation
+nnoremap <silent> K :call CocActionAsync('doHover')<CR>
+
+" ==========================================================
+" Auto Formatting
+" ==========================================================
+
+" Format Rust files on save
+augroup rust_fmt
+    autocmd!
+    autocmd BufWritePre *.rs silent! call CocAction('format')
+augroup END
