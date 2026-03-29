@@ -1,0 +1,43 @@
+foreground = #ffffff
+background = #1a1a1a
+
+# Strong ANSI colors (not washed out)
+palette = 0=#1e1e2e
+palette = 1=#f38ba8
+palette = 2=#a6e3a1
+palette = 3=#f9e2af
+palette = 4=#89b4fa
+palette = 5=#cba6f7
+palette = 6=#94e2d5
+palette = 7=#bac2de
+palette = 8=#585b70
+palette = 9=#f38ba8
+palette = 10=#a6e3a1
+palette = 11=#f9e2af
+palette = 12=#89b4fa
+palette = 13=#cba6f7
+palette = 14=#94e2d5
+palette = 15=#ffffff
+
+# Font
+font-family = jetbrains mono
+font-size = 11
+# Padding
+window-padding-x = 8
+window-padding-y = 8
+
+# Transparency
+background-opacity = 0.5
+
+# Blur (works with Hyprland)
+# background-blur = true
+
+# Cursor
+cursor-style = underline
+# valid values are: bar, block, underline, block_hollow
+
+# Scrollback
+scrollback-limit = 5000
+
+# Let Hyprland handle borders
+window-decoration = false
